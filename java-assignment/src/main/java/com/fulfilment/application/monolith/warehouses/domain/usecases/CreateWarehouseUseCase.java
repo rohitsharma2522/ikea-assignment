@@ -1,24 +1,81 @@
 package com.fulfilment.application.monolith.warehouses.domain.usecases;
 
+import com.fulfilment.application.monolith.location.exceptions.LocationNotFoundException;
+import com.fulfilment.application.monolith.warehouses.domain.exceptions.WarehouseValidationException;
+import com.fulfilment.application.monolith.warehouses.domain.models.Location;
 import com.fulfilment.application.monolith.warehouses.domain.models.Warehouse;
 import com.fulfilment.application.monolith.warehouses.domain.ports.CreateWarehouseOperation;
+import com.fulfilment.application.monolith.warehouses.domain.ports.LocationResolver;
 import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStore;
+import com.fulfilment.application.monolith.warehouses.domain.validation.WarehouseValidator;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import java.util.List;
 
 @ApplicationScoped
 public class CreateWarehouseUseCase implements CreateWarehouseOperation {
 
   private final WarehouseStore warehouseStore;
+  private final LocationResolver locationResolver;
+  private final WarehouseValidator warehouseValidator;
 
-  public CreateWarehouseUseCase(WarehouseStore warehouseStore) {
+  @Inject
+  public CreateWarehouseUseCase(
+      WarehouseStore warehouseStore,
+      LocationResolver locationResolver,
+      WarehouseValidator warehouseValidator) {
     this.warehouseStore = warehouseStore;
+    this.locationResolver = locationResolver;
+    this.warehouseValidator = warehouseValidator;
   }
 
   @Override
   public void create(Warehouse warehouse) {
-    // TODO implement this method
+    warehouseValidator.validate(warehouse);
 
-    // if all went well, create the warehouse
+    Location location = locationResolver.resolveByIdentifier(warehouse.location);
+    if (location == null) {
+      throw new LocationNotFoundException(warehouse.location);
+    }
+
+    List<Warehouse> activeWarehouses =
+        warehouseStore.getAll().stream().filter(existing -> existing.archivedAt == null).toList();
+
+    validateBusinessUnitCodeIsAvailable(warehouse, activeWarehouses);
+    validateLocationLimits(warehouse, location, activeWarehouses);
+
     warehouseStore.create(warehouse);
+  }
+
+  private void validateBusinessUnitCodeIsAvailable(
+      Warehouse warehouse, List<Warehouse> activeWarehouses) {
+    boolean businessUnitCodeAlreadyExists =
+        activeWarehouses.stream()
+            .anyMatch(existing -> existing.businessUnitCode.equals(warehouse.businessUnitCode));
+
+    if (businessUnitCodeAlreadyExists) {
+      throw new WarehouseValidationException(
+          "An active warehouse already uses business unit code: " + warehouse.businessUnitCode);
+    }
+  }
+
+  private void validateLocationLimits(
+      Warehouse warehouse, Location location, List<Warehouse> activeWarehouses) {
+    List<Warehouse> warehousesAtLocation =
+        activeWarehouses.stream()
+            .filter(existing -> existing.location.equals(warehouse.location))
+            .toList();
+
+    if (warehousesAtLocation.size() >= location.maxNumberOfWarehouses) {
+      throw new WarehouseValidationException(
+          "Location has reached its maximum number of warehouses: " + warehouse.location);
+    }
+
+    int allocatedCapacity =
+        warehousesAtLocation.stream().mapToInt(existing -> existing.capacity).sum();
+    if (allocatedCapacity + warehouse.capacity > location.maxCapacity) {
+      throw new WarehouseValidationException(
+          "Warehouse capacity exceeds the location maximum capacity: " + warehouse.location);
+    }
   }
 }
