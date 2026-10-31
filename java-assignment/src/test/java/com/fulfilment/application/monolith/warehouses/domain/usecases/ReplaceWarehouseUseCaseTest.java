@@ -139,9 +139,6 @@ class ReplaceWarehouseUseCaseTest {
     public void update(Warehouse warehouse) {}
 
     @Override
-    public void remove(Warehouse warehouse) {}
-
-    @Override
     public Warehouse findByBusinessUnitCode(String businessUnitCode) {
       return warehouses.stream()
           .filter(warehouse -> warehouse.archivedAt == null)

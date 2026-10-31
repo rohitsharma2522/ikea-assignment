@@ -5,7 +5,6 @@ import com.fulfilment.application.monolith.warehouses.domain.exceptions.Warehous
 import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStore;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @ApplicationScoped
@@ -32,12 +31,6 @@ public class WarehouseRepository implements WarehouseStore, PanacheRepository<Db
 
     dbWarehouse.updateFrom(warehouse);
     getEntityManager().flush();
-  }
-
-  @Override
-  public void remove(Warehouse warehouse) {
-    warehouse.archivedAt = LocalDateTime.now();
-    update(warehouse);
   }
 
   @Override
