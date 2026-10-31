@@ -8,8 +8,12 @@ import com.fulfilment.application.monolith.location.exceptions.LocationNotFoundE
 import com.fulfilment.application.monolith.warehouses.domain.exceptions.WarehouseValidationException;
 import com.fulfilment.application.monolith.warehouses.domain.models.Warehouse;
 import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStore;
+import com.fulfilment.application.monolith.warehouses.domain.validation.DefaultWarehousePlacementPolicy;
 import com.fulfilment.application.monolith.warehouses.domain.validation.DefaultWarehouseValidator;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,10 +21,13 @@ import org.junit.jupiter.api.Test;
 
 class CreateWarehouseUseCaseTest {
 
+  private static final Clock CLOCK =
+      Clock.fixed(Instant.parse("2026-10-31T10:15:30Z"), ZoneOffset.UTC);
+
   @Test
   void createsWarehouseWhenAllBusinessRulesAreMet() {
     var store = new InMemoryWarehouseStore();
-    var useCase = new CreateWarehouseUseCase(store, new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(store);
     var warehouse = warehouse("MWH.100", "EINDHOVEN-001", 60, 20);
 
     useCase.create(warehouse);
@@ -30,9 +37,7 @@ class CreateWarehouseUseCaseTest {
 
   @Test
   void rejectsAnUnknownLocationWithADomainValidationError() {
-    var useCase =
-        new CreateWarehouseUseCase(
-            new InMemoryWarehouseStore(), new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(new InMemoryWarehouseStore());
 
     var exception =
         assertThrows(
@@ -45,7 +50,7 @@ class CreateWarehouseUseCaseTest {
   @Test
   void rejectsAnActiveDuplicateBusinessUnitCode() {
     var store = new InMemoryWarehouseStore(warehouse("MWH.100", "EINDHOVEN-001", 20, 5));
-    var useCase = new CreateWarehouseUseCase(store, new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(store);
 
     assertThrows(
         WarehouseValidationException.class,
@@ -57,7 +62,7 @@ class CreateWarehouseUseCaseTest {
     var archivedWarehouse = warehouse("MWH.100", "EINDHOVEN-001", 20, 5);
     archivedWarehouse.archivedAt = LocalDateTime.now();
     var store = new InMemoryWarehouseStore(archivedWarehouse);
-    var useCase = new CreateWarehouseUseCase(store, new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(store);
 
     useCase.create(warehouse("MWH.100", "EINDHOVEN-001", 20, 5));
 
@@ -67,7 +72,7 @@ class CreateWarehouseUseCaseTest {
   @Test
   void rejectsCreationWhenTheLocationHasReachedItsWarehouseLimit() {
     var store = new InMemoryWarehouseStore(warehouse("MWH.001", "ZWOLLE-001", 10, 5));
-    var useCase = new CreateWarehouseUseCase(store, new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(store);
 
     assertThrows(
         WarehouseValidationException.class,
@@ -77,7 +82,7 @@ class CreateWarehouseUseCaseTest {
   @Test
   void rejectsCreationWhenTheLocationCapacityWouldBeExceeded() {
     var store = new InMemoryWarehouseStore(warehouse("MWH.001", "AMSTERDAM-001", 80, 5));
-    var useCase = new CreateWarehouseUseCase(store, new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(store);
 
     assertThrows(
         WarehouseValidationException.class,
@@ -86,9 +91,7 @@ class CreateWarehouseUseCaseTest {
 
   @Test
   void rejectsStockThatExceedsWarehouseCapacity() {
-    var useCase =
-        new CreateWarehouseUseCase(
-            new InMemoryWarehouseStore(), new LocationGateway(), new DefaultWarehouseValidator());
+    var useCase = createUseCase(new InMemoryWarehouseStore());
 
     assertThrows(
         WarehouseValidationException.class,
@@ -102,6 +105,12 @@ class CreateWarehouseUseCaseTest {
     warehouse.capacity = capacity;
     warehouse.stock = stock;
     return warehouse;
+  }
+
+  private static CreateWarehouseUseCase createUseCase(InMemoryWarehouseStore store) {
+    var placementPolicy = new DefaultWarehousePlacementPolicy(store, new LocationGateway());
+    return new CreateWarehouseUseCase(
+        store, new DefaultWarehouseValidator(), placementPolicy, locations -> {}, CLOCK);
   }
 
   private static final class InMemoryWarehouseStore implements WarehouseStore {
