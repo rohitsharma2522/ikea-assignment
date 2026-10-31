@@ -1,6 +1,8 @@
 package com.fulfilment.application.monolith.warehouses.domain.models;
 
+import com.fulfilment.application.monolith.warehouses.domain.exceptions.WarehouseAlreadyArchivedException;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class Warehouse {
 
@@ -33,5 +35,13 @@ public class Warehouse {
     }
 
     this.id = id;
+  }
+
+  public void archive(LocalDateTime archivedAt) {
+    if (this.archivedAt != null) {
+      throw new WarehouseAlreadyArchivedException(id);
+    }
+
+    this.archivedAt = Objects.requireNonNull(archivedAt, "Archive timestamp cannot be null");
   }
 }

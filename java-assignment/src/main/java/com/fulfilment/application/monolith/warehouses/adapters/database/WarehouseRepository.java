@@ -1,6 +1,7 @@
 package com.fulfilment.application.monolith.warehouses.adapters.database;
 
 import com.fulfilment.application.monolith.warehouses.domain.models.Warehouse;
+import com.fulfilment.application.monolith.warehouses.domain.exceptions.WarehouseNotFoundException;
 import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStore;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -26,10 +27,11 @@ public class WarehouseRepository implements WarehouseStore, PanacheRepository<Db
   public void update(Warehouse warehouse) {
     DbWarehouse dbWarehouse = findById(warehouse.getId());
     if (dbWarehouse == null) {
-      throw new IllegalArgumentException("Warehouse does not exist: " + warehouse.getId());
+      throw new WarehouseNotFoundException(String.valueOf(warehouse.getId()));
     }
 
     dbWarehouse.updateFrom(warehouse);
+    getEntityManager().flush();
   }
 
   @Override
