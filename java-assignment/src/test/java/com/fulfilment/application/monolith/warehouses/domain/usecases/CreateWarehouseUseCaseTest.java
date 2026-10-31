@@ -136,11 +136,6 @@ class CreateWarehouseUseCaseTest {
     }
 
     @Override
-    public void remove(Warehouse warehouse) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Warehouse findByBusinessUnitCode(String businessUnitCode) {
       return warehouses.stream()
           .filter(warehouse -> warehouse.archivedAt == null)

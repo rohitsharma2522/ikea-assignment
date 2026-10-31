@@ -175,9 +175,6 @@ class WarehouseResourceImplTest {
     public void update(Warehouse warehouse) {}
 
     @Override
-    public void remove(Warehouse warehouse) {}
-
-    @Override
     public Warehouse findByBusinessUnitCode(String buCode) {
       return null;
     }

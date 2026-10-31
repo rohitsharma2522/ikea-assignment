@@ -73,11 +73,6 @@ class ArchiveWarehouseUseCaseTest {
     }
 
     @Override
-    public void remove(Warehouse warehouse) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Warehouse findByBusinessUnitCode(String buCode) {
       return null;
     }
