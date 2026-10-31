@@ -31,6 +31,9 @@ public class DbWarehouse {
 
   public Warehouse toWarehouse() {
     var warehouse = new Warehouse();
+    if (this.id != null) {
+      warehouse.assignId(this.id);
+    }
     warehouse.businessUnitCode = this.businessUnitCode;
     warehouse.location = this.location;
     warehouse.capacity = this.capacity;
@@ -38,5 +41,21 @@ public class DbWarehouse {
     warehouse.createdAt = this.createdAt;
     warehouse.archivedAt = this.archivedAt;
     return warehouse;
+  }
+
+  public static DbWarehouse fromWarehouse(Warehouse warehouse) {
+    var dbWarehouse = new DbWarehouse();
+    dbWarehouse.id = warehouse.getId();
+    dbWarehouse.updateFrom(warehouse);
+    return dbWarehouse;
+  }
+
+  public void updateFrom(Warehouse warehouse) {
+    this.businessUnitCode = warehouse.businessUnitCode;
+    this.location = warehouse.location;
+    this.capacity = warehouse.capacity;
+    this.stock = warehouse.stock;
+    this.createdAt = warehouse.createdAt;
+    this.archivedAt = warehouse.archivedAt;
   }
 }

@@ -12,6 +12,7 @@ import com.fulfilment.application.monolith.warehouses.domain.validation.DefaultW
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 
 class CreateWarehouseUseCaseTest {
@@ -133,9 +134,35 @@ class CreateWarehouseUseCaseTest {
     @Override
     public Warehouse findByBusinessUnitCode(String businessUnitCode) {
       return warehouses.stream()
+          .filter(warehouse -> warehouse.archivedAt == null)
           .filter(warehouse -> warehouse.businessUnitCode.equals(businessUnitCode))
           .findFirst()
           .orElse(null);
+    }
+
+    @Override
+    public Warehouse findActiveById(Long id) {
+      return warehouses.stream()
+          .filter(warehouse -> Objects.equals(warehouse.getId(), id))
+          .findFirst()
+          .orElse(null);
+    }
+
+    @Override
+    public long countActiveByLocation(String location) {
+      return warehouses.stream()
+          .filter(warehouse -> warehouse.archivedAt == null)
+          .filter(warehouse -> warehouse.location.equals(location))
+          .count();
+    }
+
+    @Override
+    public int totalActiveCapacityByLocation(String location) {
+      return warehouses.stream()
+          .filter(warehouse -> warehouse.archivedAt == null)
+          .filter(warehouse -> warehouse.location.equals(location))
+          .mapToInt(warehouse -> warehouse.capacity)
+          .sum();
     }
   }
 }

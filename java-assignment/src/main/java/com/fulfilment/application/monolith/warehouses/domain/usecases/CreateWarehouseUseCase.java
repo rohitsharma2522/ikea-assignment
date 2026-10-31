@@ -10,7 +10,6 @@ import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStor
 import com.fulfilment.application.monolith.warehouses.domain.validation.WarehouseValidator;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.List;
 
 @ApplicationScoped
 public class CreateWarehouseUseCase implements CreateWarehouseOperation {
@@ -38,41 +37,26 @@ public class CreateWarehouseUseCase implements CreateWarehouseOperation {
       throw new LocationNotFoundException(warehouse.location);
     }
 
-    List<Warehouse> activeWarehouses =
-        warehouseStore.getAll().stream().filter(existing -> existing.archivedAt == null).toList();
-
-    validateBusinessUnitCodeIsAvailable(warehouse, activeWarehouses);
-    validateLocationLimits(warehouse, location, activeWarehouses);
+    validateBusinessUnitCodeIsAvailable(warehouse);
+    validateLocationLimits(warehouse, location);
 
     warehouseStore.create(warehouse);
   }
 
-  private void validateBusinessUnitCodeIsAvailable(
-      Warehouse warehouse, List<Warehouse> activeWarehouses) {
-    boolean businessUnitCodeAlreadyExists =
-        activeWarehouses.stream()
-            .anyMatch(existing -> existing.businessUnitCode.equals(warehouse.businessUnitCode));
-
-    if (businessUnitCodeAlreadyExists) {
+  private void validateBusinessUnitCodeIsAvailable(Warehouse warehouse) {
+    if (warehouseStore.findByBusinessUnitCode(warehouse.businessUnitCode) != null) {
       throw new WarehouseValidationException(
           "An active warehouse already uses business unit code: " + warehouse.businessUnitCode);
     }
   }
 
-  private void validateLocationLimits(
-      Warehouse warehouse, Location location, List<Warehouse> activeWarehouses) {
-    List<Warehouse> warehousesAtLocation =
-        activeWarehouses.stream()
-            .filter(existing -> existing.location.equals(warehouse.location))
-            .toList();
-
-    if (warehousesAtLocation.size() >= location.maxNumberOfWarehouses) {
+  private void validateLocationLimits(Warehouse warehouse, Location location) {
+    if (warehouseStore.countActiveByLocation(warehouse.location) >= location.maxNumberOfWarehouses) {
       throw new WarehouseValidationException(
           "Location has reached its maximum number of warehouses: " + warehouse.location);
     }
 
-    int allocatedCapacity =
-        warehousesAtLocation.stream().mapToInt(existing -> existing.capacity).sum();
+    int allocatedCapacity = warehouseStore.totalActiveCapacityByLocation(warehouse.location);
     if (allocatedCapacity + warehouse.capacity > location.maxCapacity) {
       throw new WarehouseValidationException(
           "Warehouse capacity exceeds the location maximum capacity: " + warehouse.location);
