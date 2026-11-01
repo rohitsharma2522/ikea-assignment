@@ -12,10 +12,13 @@ import jakarta.inject.Inject;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.BadRequestException;
 import java.util.List;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.ResponseStatus;
 
 @RequestScoped
 public class WarehouseResourceImpl implements WarehouseResource {
+
+  private static final Logger LOGGER = Logger.getLogger(WarehouseResourceImpl.class);
 
   private final WarehouseStore warehouseStore;
   private final ArchiveWarehouseOperation archiveWarehouseOperation;
@@ -44,6 +47,13 @@ public class WarehouseResourceImpl implements WarehouseResource {
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
     var warehouse = toDomainWarehouse(data);
     createWarehouseOperation.create(warehouse);
+    LOGGER.info(
+        "Warehouse created: id="
+            + warehouse.getId()
+            + ", businessUnitCode="
+            + warehouse.businessUnitCode
+            + ", location="
+            + warehouse.location);
     return toWarehouseResponse(warehouse);
   }
 
@@ -54,7 +64,13 @@ public class WarehouseResourceImpl implements WarehouseResource {
 
   @Override
   public void archiveAWarehouseUnitByID(String id) {
-    archiveWarehouseOperation.archive(findActiveWarehouse(id));
+    var warehouse = findActiveWarehouse(id);
+    archiveWarehouseOperation.archive(warehouse);
+    LOGGER.info(
+        "Warehouse archived: id="
+            + warehouse.getId()
+            + ", businessUnitCode="
+            + warehouse.businessUnitCode);
   }
 
   @Override
@@ -62,6 +78,13 @@ public class WarehouseResourceImpl implements WarehouseResource {
       String businessUnitCode, @NotNull Warehouse data) {
     var warehouse = toDomainWarehouse(data);
     replaceWarehouseOperation.replace(businessUnitCode, warehouse);
+    LOGGER.info(
+        "Warehouse replaced: id="
+            + warehouse.getId()
+            + ", businessUnitCode="
+            + warehouse.businessUnitCode
+            + ", location="
+            + warehouse.location);
     return toWarehouseResponse(warehouse);
   }
 

@@ -130,11 +130,16 @@ public class StoreResource {
 
     @Override
     public Response toResponse(Exception exception) {
-      LOGGER.error("Failed to handle request", exception);
-
       int code = 500;
-      if (exception instanceof WebApplicationException) {
-        code = ((WebApplicationException) exception).getResponse().getStatus();
+      if (exception instanceof WebApplicationException webApplicationException
+          && webApplicationException.getResponse() != null) {
+        code = webApplicationException.getResponse().getStatus();
+      }
+
+      if (code >= 500) {
+        LOGGER.error("Store request failed with status " + code, exception);
+      } else {
+        LOGGER.warn("Store request rejected with status " + code + ": " + exception.getMessage());
       }
 
       ObjectNode exceptionJson = objectMapper.createObjectNode();
